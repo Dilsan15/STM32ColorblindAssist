@@ -49,8 +49,12 @@ I2C_HandleTypeDef hi2c1;
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
-//uint8_t tx_buffer[30] = "red\r";
-
+/
+struct HSV
+{
+  double Hue, Saturation, Value;
+  char c_name[20];
+};
 
 uint8_t tx_red[4] = "red\r";
 uint8_t tx_blue[5] = "blue\r";
@@ -138,20 +142,30 @@ int main(void)
   MX_USART1_UART_Init();
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
+
   getRGB(&red, &green, &blue);
- 	  
+
+ 	float hue(int a, int b, int c);
+  float saturation(int a, int b, int c);
+  float value(int a, int b, int c);
+  char* hsv_string(struct HSV hsv_c);
+
+  float currentHue = hue(red,green,blue);
+  float currentSat = saturation(red,green,blue);
+  float currentVal = value(red,green,blue);
+  struct HSV HSV_colour = {currentHue, currentSat, currentVal, "none"};
+  sendColour(hsv_string(HSV_colour));
+
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-//  while (1)
-//  {
-//	  HAL_UART_Transmit(&huart1, tx_red, strlen(tx_red), 100);
-//	  HAL_Delay(4000);
-//
-//
-//  }
-//  /* USER CODE END 3 */
+  while (1)
+  {
+
+  }
+   /* USER CODE END 3 */
 }
 
 /**
@@ -365,6 +379,117 @@ void sendColour (char pass_colour[])
 		HAL_UART_Transmit(&huart1, tx_brown,6, 100);
 	}
 	HAL_Delay(4000);
+}
+
+
+char* hsv_string(struct HSV hsv_c){
+    struct HSV all_colors_hsv[] = {
+    {0, 1.00, 1.00, "red"},
+    {120, 1.00, 1.00, "green"},
+    {240, 1.00, 1.00, "blue"},
+    {60, 1.00, 1.00, "yellow"},
+    {0, 0.00, 0.00, "black"},
+    {0, 0.00, 1.00, "white"},
+    {0, 0.00, 0.50, "grey"},
+    {39, 1.00, 1.00, "orange"},
+    {350, 0.25, 1.00, "pink"},
+    {0, 0.75, 0.65, "brown"},
+    {300, 1.00, 0.50, "purple"},
+    };
+
+    double min_dis = 10000;
+    int all_c_index = 0;
+
+    double distance;
+    struct HSV select_color;
+
+    for (int i = 0; i < (11); i++){
+        select_color = all_colors_hsv[i];
+        distance = sqrt(pow(hsv_c.Hue - select_color.Hue, 2) + pow(hsv_c.Saturation - select_color.Saturation, 2) + pow(hsv_c.Value - select_color.Value, 2));
+
+        if (distance < min_dis){
+            all_c_index = i;
+            min_dis = distance;
+
+        }
+    }
+
+    if (all_c_index == 0){
+        return "red";
+    } else if (all_c_index == 3){
+        return "green";
+    }else if (all_c_index == 2){
+        return "blue";
+    }else if (all_c_index == 7){
+        return "yellow";
+    }else if (all_c_index == 4){
+        return "black";
+    }else if (all_c_index == 5){
+        return "white";
+    }else if (all_c_index == 6){
+        return "grey";
+    }else if (all_c_index == 7){
+        return "orange";
+    }else if (all_c_index == 8){
+        return "pink";
+    }else if (all_c_index == 9){
+        return "brown";
+    }else if (all_c_index == 10){
+        return "purple";
+    }
+
+}
+float hue(int a, int b, int c) {
+	float hsv; // Array to store hue, saturation, value
+	float gNorm = b / 255.0f;
+	float rNorm = a / 255.0f;
+	float bNorm = c / 255.0f;
+
+	float max = fmaxf(rNorm, fmaxf(gNorm, bNorm));
+	float min = fminf(rNorm, fminf(gNorm, bNorm));
+	float d = max - min;
+
+	if (d == 0) {
+	        hsv = 0;
+	    } else if (max == rNorm) {
+	        hsv = fmodf(((gNorm - bNorm) / d), 6.0f) * 60.0f;
+	        if (hsv < 0) hsv += 360.0f;
+	    } else if (max == gNorm) {
+	        hsv = ((bNorm - rNorm) / d + 2.0f) * 60.0f;
+	    } else {
+	        hsv = ((rNorm - gNorm) / d + 4.0f) * 60.0f;
+	    }
+	return hsv;
+}
+
+float saturation(int a, int b, int c) {
+	float hsv; // Array to store hue, saturation, value
+	float gNorm = b / 255.0f;
+	float rNorm = a / 255.0f;
+	float bNorm = c / 255.0f;
+
+	float max = fmaxf(rNorm, fmaxf(gNorm, bNorm));
+	float min = fminf(rNorm, fminf(gNorm, bNorm));
+	float d = max - min;
+
+	hsv = (max == 0) ? 0 : (d / max) * 100.0;
+
+	return hsv;
+}
+
+float value(int a, int b, int c) {
+	float hsv; // Array to store hue, saturation, value
+	float gNorm = b / 255.0f;
+	float rNorm = a / 255.0f;
+	float bNorm = c / 255.0f;
+
+	float max = fmaxf(rNorm, fmaxf(gNorm, bNorm));
+	float min = fminf(rNorm, fminf(gNorm, bNorm));
+	float d = max - min;
+
+	hsv = max * 100.0;
+
+	return hsv;
 }
 
 void write8 (uint8_t reg, uint32_t value);
